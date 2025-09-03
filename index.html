@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doposcuola – Ricerca per vicinanza</title>
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 24px; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .muted { color: #666; font-size: 13px; }
+    .grid { display: grid; gap: 16px; margin: 16px 0; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .grid-3-2-1 { grid-template-columns: 2fr 1fr 1fr; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+    label { font-size: 14px; color: #444; display:block; margin-bottom:6px; }
+    input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    input[type="file"] { width: 100%; }
+    button { padding: 10px 14px; border: 0; border-radius: 8px; cursor: pointer; }
+    .btn { background: #1e88e5; color: white; }
+    .btn-secondary { background: #eee; color: #333; }
+    .btn:disabled { background: #9bbfe7; cursor: not-allowed; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top: 8px; }
+    .tab { padding:8px 12px; border-radius:999px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    .tab.active { background:#1e88e5; color:#fff; border-color:#1e88e5; }
+    .count { font-size:12px; opacity:.8; margin-left:6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border-bottom: 1px solid #eee; text-align: left; padding: 10px; vertical-align: top; }
+    th { background: #fafafa; position: sticky; top: 0; z-index: 1; }
+    details summary { cursor: pointer; color: #1e88e5; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background:#eef5ff; color:#1e88e5; font-size:12px; }
+    .row-flex { display:flex; gap:8px; align-items:end; flex-wrap: wrap; }
+  </style>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <h1>Doposcuola – Ricerca per vicinanza</h1>
+  <p class="muted">I tre dataset possono essere precaricati (da URL o incorporati). Se un caricamento fallisce, puoi sempre caricare il CSV manualmente.</p>
+
+  <!-- Upload (fallback) -->
+  <div class="grid grid-3">
+    <div class="card">
+      <label>Doposcuola <b>elementari</b> – carica CSV (fallback)</label>
+      <input id="fileElem" type="file" accept=".csv" />
+      <div id="infoElem" class="muted">In attesa…</div>
+    </div>
+    <div class="card">
+      <label>Doposcuola <b>medie</b> – carica CSV (fallback)</label>
+      <input id="fileMed" type="file" accept=".csv" />
+      <div id="infoMed" class="muted">In attesa…</div>
+    </div>
+    <div class="card">
+      <label>Doposcuola <b>superiori</b> – carica CSV (fallback)</label>
+      <input id="fileSup" type="file" accept=".csv" />
+      <div id="infoSup" class="muted">In attesa…</div>
+    </div>
+  </div>
+
+  <!-- Controlli -->
+  <div class="card">
+    <div class="grid grid-3-2-1">
+      <div>
+        <label>Cerca una via (origine)</label>
+        <input id="addressInput" type="text" placeholder="Es. Via Roma 10, Piacenza" />
+      </div>
+      <div>
+        <label>Filtro testo (opz.)</label>
+        <input id="textFilter" type="text" placeholder="parola chiave" />
+      </div>
+      <div class="row-flex">
+        <button id="searchBtn" class="btn">Cerca</button>
+        <button id="clearBtn" class="btn-secondary">Pulisci</button>
+        <button id="downloadBtn" class="btn-secondary">Scarica risultati</button>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:6px">Geocoding: Nominatim / OpenStreetMap (uso equo).</div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-cat="ALL">Tutte <span class="count" id="countALL"></span></button>
+      <button class="tab" data-cat="Doposcuola elementari">Elementari <span class="count" id="countElem"></span></button>
+      <button class="tab" data-cat="Doposcuola medie">Medie <span class="count" id="countMed"></span></button>
+      <button class="tab" data-cat="Doposcuola superiori">Superiori <span class="count" id="countSup"></span></button>
+    </div>
+  </div>
+
+  <!-- Risultati -->
+  <div class="card">
+    <div class="row-flex" style="justify-content:space-between;">
+      <span id="status" class="muted">Caricamento iniziale…</span>
+      <span id="loadedInfo" class="muted"></span>
+    </div>
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th>Distanza (km)</th>
+          <th>Nome</th>
+          <th>Indirizzo</th>
+          <th>Dettagli</th>
+          <th class="muted">Categoria</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+/* ================= CONFIG ================= */
+/* Opzione A: carica da URL pubblici (lascia stringa vuota se non usi) */
+const CSV_URLS = {
+  elem: "./doposcuola_elementari.csv",
+  med:  "./doposcuola_medie.csv",
+  sup:  "./doposcuola_superiori.csv"
+};
+/* Opzione B: CSV incorporati (incolla qui il contenuto dei file, incluso l'header) */
+const CSV_INLINE_ELEM = ``;
+const CSV_INLINE_MED  = ``;
+const CSV_INLINE_SUP  = ``;
+/* ============== FINE CONFIG ============== */
+
+const els = {
+  fileElem: document.getElementById('fileElem'),
+  fileMed: document.getElementById('fileMed'),
+  fileSup: document.getElementById('fileSup'),
+  infoElem: document.getElementById('infoElem'),
+  infoMed: document.getElementById('infoMed'),
+  infoSup: document.getElementById('infoSup'),
+  addressInput: document.getElementById('addressInput'),
+  textFilter: document.getElementById('textFilter'),
+  searchBtn: document.getElementById('searchBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  downloadBtn: document.getElementById('downloadBtn'),
+  resultsBody: document.querySelector('#resultsTable tbody'),
+  status: document.getElementById('status'),
+  loadedInfo: document.getElementById('loadedInfo'),
+  tabs: document.getElementById('tabs'),
+  countALL: document.getElementById('countALL'),
+  countElem: document.getElementById('countElem'),
+  countMed: document.getElementById('countMed'),
+  countSup: document.getElementById('countSup'),
+};
+
+const datasets = []; // {name, rows: [...]}
+let activeCat = "ALL";
+let lastResults = [];
+
+/* ===== Util ===== */
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function normalizeRow(row) {
+  const get = (k) => row[k] ?? row[k?.toUpperCase?.()] ?? row[k?.toLowerCase?.()];
+  const lat = parseFloat((get("lat")||"").toString().replace(",", "."));
+  const lon = parseFloat((get("lon")||"").toString().replace(",", "."));
+  return {
+    NOME: (get("NOME")||"").toString().trim(),
+    INDIRIZZO: (get("INDIRIZZO")||"").toString().trim(),
+    lat, lon,
+    modalita_iscrizione: (get("modalita_iscrizione")||"").toString().trim(),
+    giorni_orari: (get("giorni_orari")||"").toString().trim(),
+    note: (get("note")||"").toString().trim(),
+  };
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function renderDetails(row) {
+  const blocks = [];
+  if (row.modalita_iscrizione) blocks.push(`<b>Modalità di iscrizione</b><br>${escapeHtml(row.modalita_iscrizione)}`);
+  if (row.giorni_orari) blocks.push(`<b>Giorni e orari</b><br>${escapeHtml(row.giorni_orari)}`);
+  if (row.note) blocks.push(`<b>Note</b><br>${escapeHtml(row.note)}`);
+  if (!blocks.length) return "–";
+  const full = blocks.join("<br><br>");
+  if (full.length <= 220) return full;
+  return `<details><summary>Leggi di più</summary><div style="margin-top:8px">${full}</div></details>`;
+}
+
+/* ===== Caricamento CSV (URL / inline / upload) ===== */
+function addDataset(name, rows) {
+  const idx = datasets.findIndex(d => d.name === name);
+  const ds = { name, rows };
+  if (idx >= 0) datasets.splice(idx,1,ds); else datasets.push(ds);
+  refreshCounts();
+  els.loadedInfo.textContent = `${datasets.reduce((a,d)=>a+d.rows.length,0)} righe totali su ${datasets.length} categorie`;
+}
+function parseCsvText(name, csvText) {
+  const res = Papa.parse(csvText, { header: true, skipEmptyLines: 'greedy' });
+  const rows = res.data.map(normalizeRow).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
+  addDataset(name, rows);
+  return rows.length;
+}
+async function fetchCsv(name, url) {
+  const resp = await fetch(url, { headers: { 'Accept':'text/csv' }});
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const text = await resp.text();
+  return parseCsvText(name, text);
+}
+function hookFileInput(inputEl, name, infoEl) {
+  inputEl.addEventListener('change', () => {
+    const f = inputEl.files?.[0]; if (!f) return;
+    Papa.parse(f, {
+      header: true, skipEmptyLines: 'greedy',
+      complete: (res) => {
+        const rows = res.data.map(normalizeRow).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
+        addDataset(name, rows);
+        infoEl.textContent = `${f.name} — ${rows.length} righe valide`;
+        if (lastResults.length) runSearch();
+      },
+      error: (err) => { infoEl.textContent = `Errore: ${err?.message || err}`; }
+    });
+  });
+}
+hookFileInput(els.fileElem, "Doposcuola elementari", els.infoElem);
+hookFileInput(els.fileMed,  "Doposcuola medie",      els.infoMed);
+hookFileInput(els.fileSup,  "Doposcuola superiori",  els.infoSup);
+
+/* Auto-load all'avvio */
+(async function autoLoad() {
+  try {
+    els.status.textContent = "Carico dataset…";
+    let total=0;
+
+    // A) Da URL se presenti
+    if (CSV_URLS.elem) {
+      try { const n = await fetchCsv("Doposcuola elementari", CSV_URLS.elem); total+=n; els.infoElem.textContent = `Auto: ${n} righe da URL`; } catch(e){ els.infoElem.textContent = `Auto (URL) fallito`; }
+    }
+    if (CSV_URLS.med)  {
+      try { const n = await fetchCsv("Doposcuola medie", CSV_URLS.med); total+=n; els.infoMed.textContent  = `Auto: ${n} righe da URL`; } catch(e){ els.infoMed.textContent  = `Auto (URL) fallito`; }
+    }
+    if (CSV_URLS.sup)  {
+      try { const n = await fetchCsv("Doposcuola superiori", CSV_URLS.sup); total+=n; els.infoSup.textContent  = `Auto: ${n} righe da URL`; } catch(e){ els.infoSup.textContent  = `Auto (URL) fallito`; }
+    }
+
+    // B) Se non c'è URL o è fallito, prova inline
+    if (!datasets.find(d=>d.name==="Doposcuola elementari") && CSV_INLINE_ELEM.trim()) {
+      const n = parseCsvText("Doposcuola elementari", CSV_INLINE_ELEM); total+=n; els.infoElem.textContent = `Auto: ${n} righe da inline`;
+    }
+    if (!datasets.find(d=>d.name==="Doposcuola medie") && CSV_INLINE_MED.trim()) {
+      const n = parseCsvText("Doposcuola medie", CSV_INLINE_MED); total+=n; els.infoMed.textContent  = `Auto: ${n} righe da inline`;
+    }
+    if (!datasets.find(d=>d.name==="Doposcuola superiori") && CSV_INLINE_SUP.trim()) {
+      const n = parseCsvText("Doposcuola superiori", CSV_INLINE_SUP); total+=n; els.infoSup.textContent  = `Auto: ${n} righe da inline`;
+    }
+
+    // C) Se ancora mancano, resta upload manuale
+    if (!datasets.length) {
+      els.status.textContent = "Nessun dataset caricato: usa l'upload (fallback).";
+    } else {
+      els.status.textContent = `Caricati ${datasets.length} dataset (${datasets.reduce((a,d)=>a+d.rows.length,0)} righe).`;
+    }
+  } catch(e) {
+    els.status.textContent = "Errore in caricamento iniziale.";
+  }
+})();
+
+/* Tabs */
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const b = e.target.closest('.tab'); if (!b) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  b.classList.add('active');
+  activeCat = b.dataset.cat;
+  if (lastResults.length) renderResults(lastResults);
+});
+
+/* Geocoding origine */
+async function geocode(q) {
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+  if (!res.ok) throw new Error('Geocoding non disponibile');
+  const data = await res.json();
+  if (!data?.length) throw new Error('Indirizzo non trovato');
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+}
+
+/* Ricerca */
+document.getElementById('searchBtn').addEventListener('click', runSearch);
+async function runSearch() {
+  try {
+    const q = els.addressInput.value.trim();
+    if (!q) { els.status.textContent = "Inserisci una via."; return; }
+    if (!datasets.length) { els.status.textContent = "Carica o pre-carica almeno un CSV."; return; }
+
+    els.status.textContent = "Geocodifico l'indirizzo…";
+    const origin = await geocode(q);
+
+    const allRows = datasets.flatMap(d => d.rows.map(r => ({...r, _cat: d.name})));
+    const tf = els.textFilter.value.trim().toLowerCase();
+    const filtered = tf ? allRows.filter(r =>
+      r.NOME.toLowerCase().includes(tf) ||
+      r.INDIRIZZO.toLowerCase().includes(tf) ||
+      r.modalita_iscrizione.toLowerCase().includes(tf) ||
+      r.giorni_orari.toLowerCase().includes(tf) ||
+      r.note.toLowerCase().includes(tf)
+    ) : allRows;
+
+    const withDist = filtered.map(r => ({
+      ...r,
+      distanza_km: haversineKm(origin, {lat:r.lat, lon:r.lon})
+    })).sort((a,b) => a.distanza_km - b.distanza_km);
+
+    lastResults = withDist;
+    renderResults(withDist);
+    els.status.textContent = `Trovati ${withDist.length} risultati.`;
+  } catch (e) {
+    els.status.textContent = e.message || "Errore in ricerca.";
+  }
+}
+
+/* Pulisci */
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  els.addressInput.value = "";
+  els.textFilter.value = "";
+  lastResults = [];
+  els.resultsBody.innerHTML = "";
+  els.status.textContent = "In attesa di input…";
+});
+
+/* Render risultati (rispetta tab attiva) */
+function renderResults(rows) {
+  const tbody = els.resultsBody;
+  tbody.innerHTML = "";
+  const subset = activeCat==="ALL" ? rows : rows.filter(r=>r._cat===activeCat);
+  subset.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b>${r.distanza_km.toFixed(2)}</b></td>
+      <td>${escapeHtml(r.NOME)}</td>
+      <td>${escapeHtml(r.INDIRIZZO)}<div class="muted">${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}</div></td>
+      <td>${renderDetails(r)}</td>
+      <td><span class="pill">${escapeHtml(r._cat)}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* Scarica risultati */
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const subset = activeCat==="ALL" ? lastResults : lastResults.filter(r=>r._cat===activeCat);
+  if (!subset?.length) { els.status.textContent = "Nessun risultato da scaricare."; return; }
+  const header = ["NOME","INDIRIZZO","lat","lon","modalita_iscrizione","giorni_orari","note","distanza_km","categoria"];
+  const rows = subset.map(r => [
+    r.NOME, r.INDIRIZZO, r.lat, r.lon, r.modalita_iscrizione, r.giorni_orari, r.note, r.distanza_km.toFixed(2), r._cat
+  ]);
+  const csv = Papa.unparse({fields: header, data: rows});
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "risultati.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+});
+
+function refreshCounts() {
+  const all = datasets.flatMap(d=>d.rows);
+  const cElem = datasets.find(d=>d.name==="Doposcuola elementari")?.rows.length || 0;
+  const cMed  = datasets.find(d=>d.name==="Doposcuola medie")?.rows.length || 0;
+  const cSup  = datasets.find(d=>d.name==="Doposcuola superiori")?.rows.length || 0;
+  els.countALL.textContent = all.length ? `(${all.length})` : "";
+  els.countElem.textContent = cElem ? `(${cElem})` : "";
+  els.countMed.textContent  = cMed  ? `(${cMed})`  : "";
+  els.countSup.textContent  = cSup  ? `(${cSup})`  : "";
+}
+</script>
+</body>
+</html>
