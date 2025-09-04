@@ -4,117 +4,200 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Doposcuola – Ricerca per vicinanza</title>
+
+  <!-- Tipografia -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
-    :root { font-family: system-ui, Arial, sans-serif; }
-    body { margin: 24px; }
-    h1 { margin: 0 0 8px; font-size: 22px; }
-    .muted { color: #666; font-size: 13px; }
-    .grid { display: grid; gap: 16px; margin: 16px 0; }
-    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-    .grid-3-2-1 { grid-template-columns: 2fr 1fr 1fr; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-    label { font-size: 14px; color: #444; display:block; margin-bottom:6px; }
-    input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
-    input[type="file"] { width: 100%; }
-    button { padding: 10px 14px; border: 0; border-radius: 8px; cursor: pointer; }
-    .btn { background: #1e88e5; color: white; }
-    .btn-secondary { background: #eee; color: #333; }
-    .btn:disabled { background: #9bbfe7; cursor: not-allowed; }
-    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top: 8px; }
-    .tab { padding:8px 12px; border-radius:999px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    .tab.active { background:#1e88e5; color:#fff; border-color:#1e88e5; }
-    .count { font-size:12px; opacity:.8; margin-left:6px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border-bottom: 1px solid #eee; text-align: left; padding: 10px; vertical-align: top; }
-    th { background: #fafafa; position: sticky; top: 0; z-index: 1; }
-    details summary { cursor: pointer; color: #1e88e5; }
-    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; background:#eef5ff; color:#1e88e5; font-size:12px; }
-    .row-flex { display:flex; gap:8px; align-items:end; flex-wrap: wrap; }
+    /* ================== Palette & tipografia ================== */
+    :root{
+      --bg:#f7f9fc; --card:#ffffff; --text:#101828; --muted:#667085;
+      --primary:#2563eb; --primary-100:#e6efff; --ring:#c7d2fe; --border:#e5e7eb;
+      --success:#16a34a; --warning:#f59e0b; --radius:14px;
+      --focus-outline: 3px solid #93c5fd;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8;
+        --primary:#60a5fa; --primary-100:#1e293b; --ring:#1d4ed8; --border:#22314b;
+        --focus-outline: 3px solid #2563eb;
+      }
+    }
+
+    /* ================== Layout base ================== */
+    html,body{background:var(--bg); color:var(--text); margin:0; padding:0}
+    body{padding:24px}
+    h1{margin:0 0 8px; font-size:24px; letter-spacing:.2px}
+    .muted{color:var(--muted); font-size:13px}
+    .grid{display:grid; gap:16px; margin:16px 0}
+    .grid-3{grid-template-columns:1fr 1fr 1fr}
+    .grid-3-2-1{grid-template-columns:2fr 1fr 1fr}
+    @media (max-width: 920px){
+      .grid-3{grid-template-columns:1fr}
+      .grid-3-2-1{grid-template-columns:1fr}
+    }
+
+    /* ================== Card (morbide + hover) ================== */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:0 6px 24px rgba(16,24,40,.06);
+      transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+    }
+    .card:hover{ box-shadow:0 12px 28px rgba(16,24,40,.10); transform: translateY(-1px); }
+    .card > *{padding:16px}
+
+    /* ================== Form & bottoni (micro-animazioni) ================== */
+    label{font-size:14px; color:var(--muted); display:block; margin:2px 0 6px 0; padding:0 16px}
+    input[type="text"], select, input[type="file"]{
+      width:calc(100% - 32px); margin:0 16px 12px 16px; padding:12px;
+      background:var(--card); color:var(--text);
+      border:1px solid var(--border); border-radius:10px;
+      transition:border-color .15s, box-shadow .15s, transform .08s;
+    }
+    input[type="text"]:focus, select:focus, input[type="file"]:focus{
+      outline:0; border-color:var(--primary); box-shadow:0 0 0 4px color-mix(in oklab, var(--primary) 30%, transparent);
+    }
+    input[type="text"]:active{ transform: scale(0.997); }
+
+    .btn{
+      margin:0 4px 16px 0; padding:10px 14px; border:0; border-radius:10px; font-weight:600; cursor:pointer;
+      background:var(--primary); color:#fff;
+      transition: transform .06s ease, filter .15s ease, box-shadow .15s ease;
+      box-shadow:0 4px 14px rgba(37, 99, 235, .25);
+    }
+    .btn:hover{ filter:brightness(.98) }
+    .btn:active{ transform: translateY(1px) scale(0.99) }
+    .btn-secondary{
+      background:var(--primary-100); color:var(--primary); box-shadow:none;
+    }
+    .btn:focus-visible{ outline: var(--focus-outline); outline-offset: 2px }
+
+    .row-flex{ display:flex; gap:8px; align-items:end; flex-wrap:wrap; padding:0 16px 16px }
+
+    /* ================== Tabs accessibili ================== */
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 16px 16px 16px }
+    .tab{
+      padding:8px 14px; border-radius:999px; border:1px solid var(--border); background:var(--card); cursor:pointer;
+      color:var(--text);
+    }
+    .tab[aria-selected="true"]{
+      background:var(--primary); color:#fff; border-color:var(--primary)
+    }
+    .count{ font-size:12px; opacity:.85; margin-left:6px }
+
+    /* ================== Tabella (zebrato + sticky) ================== */
+    table{ width:calc(100% - 32px); margin:12px 16px 16px 16px; border-collapse:separate; border-spacing:0 6px }
+    thead th{
+      position:sticky; top:0; z-index:2; background:color-mix(in oklab, var(--primary) 8%, var(--card));
+      color:var(--text); text-align:left; padding:12px; border-radius:10px;
+      border:1px solid var(--border);
+    }
+    tbody td{
+      background:var(--card); padding:12px; border:1px solid var(--border);
+    }
+    tbody tr td:first-child, thead tr th:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px }
+    tbody tr td:last-child,  thead tr th:last-child { border-top-right-radius:10px; border-bottom-right-radius:10px }
+    tbody tr:nth-child(2n) td{ background: color-mix(in srgb, var(--card) 88%, var(--bg)) }
+
+    details summary{ cursor:pointer; color:var(--primary) }
+    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; background:var(--primary-100); color:var(--primary); font-weight:600 }
+
+    /* ================== Focus visibile su elementi interattivi ================== */
+    a:focus-visible, button:focus-visible, [role="tab"]:focus-visible, input:focus-visible{
+      outline: var(--focus-outline); outline-offset: 2px;
+    }
   </style>
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
-  <h1>Doposcuola – Ricerca per vicinanza</h1>
-  <p class="muted">I tre dataset possono essere precaricati (da URL o incorporati). Se un caricamento fallisce, puoi sempre caricare il CSV manualmente.</p>
+  <main aria-labelledby="page-title">
+    <h1 id="page-title">Doposcuola – Ricerca per vicinanza</h1>
+    <p class="muted" id="intro">Carica (o pre–carica) i tre CSV, inserisci una via e ottieni i risultati ordinati per distanza. Filtra per categoria o testo.</p>
 
-  <!-- Upload (fallback) -->
-  <div class="grid grid-3">
-    <div class="card">
-      <label>Doposcuola <b>elementari</b> – carica CSV (fallback)</label>
-      <input id="fileElem" type="file" accept=".csv" />
-      <div id="infoElem" class="muted">In attesa…</div>
-    </div>
-    <div class="card">
-      <label>Doposcuola <b>medie</b> – carica CSV (fallback)</label>
-      <input id="fileMed" type="file" accept=".csv" />
-      <div id="infoMed" class="muted">In attesa…</div>
-    </div>
-    <div class="card">
-      <label>Doposcuola <b>superiori</b> – carica CSV (fallback)</label>
-      <input id="fileSup" type="file" accept=".csv" />
-      <div id="infoSup" class="muted">In attesa…</div>
-    </div>
-  </div>
-
-  <!-- Controlli -->
-  <div class="card">
-    <div class="grid grid-3-2-1">
-      <div>
-        <label>Cerca una via (origine)</label>
-        <input id="addressInput" type="text" placeholder="Es. Via Roma 10, Piacenza" />
+    <!-- Upload (fallback, puoi nasconderlo se non serve) -->
+    <section class="grid grid-3" aria-labelledby="upload-title">
+      <h2 class="sr-only" id="upload-title">Caricamento dataset</h2>
+      <div class="card" role="region" aria-labelledby="label-elem">
+        <label id="label-elem" for="fileElem">Doposcuola <b>elementari</b> – carica CSV (fallback)</label>
+        <input id="fileElem" type="file" accept=".csv" aria-describedby="infoElem" />
+        <div id="infoElem" class="muted">In attesa…</div>
       </div>
-      <div>
-        <label>Filtro testo (opz.)</label>
-        <input id="textFilter" type="text" placeholder="parola chiave" />
+      <div class="card" role="region" aria-labelledby="label-med">
+        <label id="label-med" for="fileMed">Doposcuola <b>medie</b> – carica CSV (fallback)</label>
+        <input id="fileMed" type="file" accept=".csv" aria-describedby="infoMed" />
+        <div id="infoMed" class="muted">In attesa…</div>
       </div>
-      <div class="row-flex">
-        <button id="searchBtn" class="btn">Cerca</button>
-        <button id="clearBtn" class="btn-secondary">Pulisci</button>
-        <button id="downloadBtn" class="btn-secondary">Scarica risultati</button>
+      <div class="card" role="region" aria-labelledby="label-sup">
+        <label id="label-sup" for="fileSup">Doposcuola <b>superiori</b> – carica CSV (fallback)</label>
+        <input id="fileSup" type="file" accept=".csv" aria-describedby="infoSup" />
+        <div id="infoSup" class="muted">In attesa…</div>
       </div>
-    </div>
-    <div class="muted" style="margin-top:6px">Geocoding: Nominatim / OpenStreetMap (uso equo).</div>
+    </section>
 
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-cat="ALL">Tutte <span class="count" id="countALL"></span></button>
-      <button class="tab" data-cat="Doposcuola elementari">Elementari <span class="count" id="countElem"></span></button>
-      <button class="tab" data-cat="Doposcuola medie">Medie <span class="count" id="countMed"></span></button>
-      <button class="tab" data-cat="Doposcuola superiori">Superiori <span class="count" id="countSup"></span></button>
-    </div>
-  </div>
+    <!-- Controlli -->
+    <section class="card" role="region" aria-labelledby="search-title">
+      <h2 class="sr-only" id="search-title">Ricerca</h2>
+      <div class="grid grid-3-2-1">
+        <div>
+          <label for="addressInput">Cerca una via (origine)</label>
+          <input id="addressInput" type="text" placeholder="Es. Via Roma 10, Piacenza" aria-label="Indirizzo di partenza per la ricerca" />
+        </div>
+        <div>
+          <label for="textFilter">Filtro testo (opz.)</label>
+          <input id="textFilter" type="text" placeholder="parola chiave" aria-label="Filtro testuale sui risultati" />
+        </div>
+        <div class="row-flex" role="group" aria-label="Azioni">
+          <button id="searchBtn" class="btn" aria-label="Cerca e ordina per distanza">Cerca</button>
+          <button id="clearBtn" class="btn btn-secondary" aria-label="Pulisci campi e risultati">Pulisci</button>
+          <button id="downloadBtn" class="btn btn-secondary" aria-label="Scarica i risultati visibili in CSV">Scarica risultati</button>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:6px">Geocoding: Nominatim / OpenStreetMap (uso equo).</div>
 
-  <!-- Risultati -->
-  <div class="card">
-    <div class="row-flex" style="justify-content:space-between;">
-      <span id="status" class="muted">Caricamento iniziale…</span>
-      <span id="loadedInfo" class="muted"></span>
-    </div>
-    <table id="resultsTable">
-      <thead>
-        <tr>
-          <th>Distanza (km)</th>
-          <th>Nome</th>
-          <th>Indirizzo</th>
-          <th>Dettagli</th>
-          <th class="muted">Categoria</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+      <!-- Tabs accessibili -->
+      <div class="tabs" id="tabs" role="tablist" aria-label="Categorie">
+        <button class="tab" role="tab" aria-selected="true" data-cat="ALL" id="tab-all" aria-controls="panel-results">Tutte <span class="count" id="countALL"></span></button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola elementari" id="tab-elem" aria-controls="panel-results">Elementari <span class="count" id="countElem"></span></button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola medie" id="tab-med" aria-controls="panel-results">Medie <span class="count" id="countMed"></span></button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola superiori" id="tab-sup" aria-controls="panel-results">Superiori <span class="count" id="countSup"></span></button>
+      </div>
+    </section>
+
+    <!-- Risultati -->
+    <section class="card" id="panel-results" role="region" aria-live="polite" aria-labelledby="results-title">
+      <h2 class="sr-only" id="results-title">Risultati</h2>
+      <div class="row-flex" style="justify-content:space-between;">
+        <span id="status" class="muted">In attesa di input…</span>
+        <span id="loadedInfo" class="muted"></span>
+      </div>
+      <div role="table" aria-label="Elenco risultati ordinati per distanza">
+        <table id="resultsTable">
+          <thead>
+            <tr role="row">
+              <th role="columnheader" scope="col">Distanza (km)</th>
+              <th role="columnheader" scope="col">Nome</th>
+              <th role="columnheader" scope="col">Indirizzo</th>
+              <th role="columnheader" scope="col">Dettagli</th>
+              <th role="columnheader" scope="col">Categoria</th>
+              <th role="columnheader" scope="col">Mappa</th>
+            </tr>
+          </thead>
+          <tbody role="rowgroup"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
 <script>
 /* ================= CONFIG ================= */
-/* Opzione A: carica da URL pubblici (lascia stringa vuota se non usi) */
+/* Se usi GitHub Pages / stesso hosting, metti i file accanto all'index e usa i percorsi relativi */
 const CSV_URLS = {
   elem: "./doposcuola_elementari.csv",
   med:  "./doposcuola_medie.csv",
   sup:  "./doposcuola_superiori.csv"
 };
-/* Opzione B: CSV incorporati (incolla qui il contenuto dei file, incluso l'header) */
-const CSV_INLINE_ELEM = ``;
-const CSV_INLINE_MED  = ``;
-const CSV_INLINE_SUP  = ``;
 /* ============== FINE CONFIG ============== */
 
 const els = {
@@ -138,7 +221,6 @@ const els = {
   countMed: document.getElementById('countMed'),
   countSup: document.getElementById('countSup'),
 };
-
 const datasets = []; // {name, rows: [...]}
 let activeCat = "ALL";
 let lastResults = [];
@@ -180,8 +262,12 @@ function renderDetails(row) {
   if (full.length <= 220) return full;
   return `<details><summary>Leggi di più</summary><div style="margin-top:8px">${full}</div></details>`;
 }
+function mapsLink(lat, lon){
+  const q = `${lat},${lon}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
 
-/* ===== Caricamento CSV (URL / inline / upload) ===== */
+/* ===== Caricamento CSV (URL / upload) ===== */
 function addDataset(name, rows) {
   const idx = datasets.findIndex(d => d.name === name);
   const ds = { name, rows };
@@ -189,17 +275,14 @@ function addDataset(name, rows) {
   refreshCounts();
   els.loadedInfo.textContent = `${datasets.reduce((a,d)=>a+d.rows.length,0)} righe totali su ${datasets.length} categorie`;
 }
-function parseCsvText(name, csvText) {
-  const res = Papa.parse(csvText, { header: true, skipEmptyLines: 'greedy' });
+async function fetchCsv(name, url) {
+  const resp = await fetch(url, { headers: { 'Accept': 'text/csv' }});
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} su ${url}`);
+  const text = await resp.text();
+  const res = Papa.parse(text, { header: true, skipEmptyLines: 'greedy' });
   const rows = res.data.map(normalizeRow).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
   addDataset(name, rows);
   return rows.length;
-}
-async function fetchCsv(name, url) {
-  const resp = await fetch(url, { headers: { 'Accept':'text/csv' }});
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const text = await resp.text();
-  return parseCsvText(name, text);
 }
 function hookFileInput(inputEl, name, infoEl) {
   inputEl.addEventListener('change', () => {
@@ -226,49 +309,42 @@ hookFileInput(els.fileSup,  "Doposcuola superiori",  els.infoSup);
     els.status.textContent = "Carico dataset…";
     let total=0;
 
-    // A) Da URL se presenti
-    if (CSV_URLS.elem) {
-      try { const n = await fetchCsv("Doposcuola elementari", CSV_URLS.elem); total+=n; els.infoElem.textContent = `Auto: ${n} righe da URL`; } catch(e){ els.infoElem.textContent = `Auto (URL) fallito`; }
-    }
-    if (CSV_URLS.med)  {
-      try { const n = await fetchCsv("Doposcuola medie", CSV_URLS.med); total+=n; els.infoMed.textContent  = `Auto: ${n} righe da URL`; } catch(e){ els.infoMed.textContent  = `Auto (URL) fallito`; }
-    }
-    if (CSV_URLS.sup)  {
-      try { const n = await fetchCsv("Doposcuola superiori", CSV_URLS.sup); total+=n; els.infoSup.textContent  = `Auto: ${n} righe da URL`; } catch(e){ els.infoSup.textContent  = `Auto (URL) fallito`; }
-    }
+    try { const n = await fetchCsv("Doposcuola elementari", CSV_URLS.elem); total+=n; els.infoElem.textContent = `Auto: ${n} righe`; } catch(e){ els.infoElem.textContent = `Auto (URL) fallito`; }
+    try { const n = await fetchCsv("Doposcuola medie",      CSV_URLS.med ); total+=n; els.infoMed.textContent  = `Auto: ${n} righe`; } catch(e){ els.infoMed.textContent  = `Auto (URL) fallito`; }
+    try { const n = await fetchCsv("Doposcuola superiori",  CSV_URLS.sup ); total+=n; els.infoSup.textContent  = `Auto: ${n} righe`; } catch(e){ els.infoSup.textContent  = `Auto (URL) fallito`; }
 
-    // B) Se non c'è URL o è fallito, prova inline
-    if (!datasets.find(d=>d.name==="Doposcuola elementari") && CSV_INLINE_ELEM.trim()) {
-      const n = parseCsvText("Doposcuola elementari", CSV_INLINE_ELEM); total+=n; els.infoElem.textContent = `Auto: ${n} righe da inline`;
-    }
-    if (!datasets.find(d=>d.name==="Doposcuola medie") && CSV_INLINE_MED.trim()) {
-      const n = parseCsvText("Doposcuola medie", CSV_INLINE_MED); total+=n; els.infoMed.textContent  = `Auto: ${n} righe da inline`;
-    }
-    if (!datasets.find(d=>d.name==="Doposcuola superiori") && CSV_INLINE_SUP.trim()) {
-      const n = parseCsvText("Doposcuola superiori", CSV_INLINE_SUP); total+=n; els.infoSup.textContent  = `Auto: ${n} righe da inline`;
-    }
-
-    // C) Se ancora mancano, resta upload manuale
-    if (!datasets.length) {
-      els.status.textContent = "Nessun dataset caricato: usa l'upload (fallback).";
-    } else {
-      els.status.textContent = `Caricati ${datasets.length} dataset (${datasets.reduce((a,d)=>a+d.rows.length,0)} righe).`;
-    }
+    els.status.textContent = datasets.length
+      ? `Caricati ${datasets.length} dataset (${datasets.reduce((a,d)=>a+d.rows.length,0)} righe).`
+      : "Nessun dataset caricato: usa l'upload (fallback).";
   } catch(e) {
     els.status.textContent = "Errore in caricamento iniziale.";
   }
 })();
 
-/* Tabs */
-document.getElementById('tabs').addEventListener('click', (e)=>{
-  const b = e.target.closest('.tab'); if (!b) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  b.classList.add('active');
-  activeCat = b.dataset.cat;
-  if (lastResults.length) renderResults(lastResults);
+/* ===== Tabs accessibili (mouse + tastiera) ===== */
+els.tabs.addEventListener('click', (e)=>{
+  const b = e.target.closest('[role="tab"]'); if (!b) return;
+  setActiveTab(b);
 });
+els.tabs.addEventListener('keydown', (e)=>{
+  const tabs = [...els.tabs.querySelectorAll('[role="tab"]')];
+  const current = document.activeElement;
+  const idx = tabs.indexOf(current);
+  if (idx === -1) return;
+  if (e.key === 'ArrowRight'){ e.preventDefault(); tabs[(idx+1)%tabs.length].focus(); }
+  if (e.key === 'ArrowLeft'){ e.preventDefault(); tabs[(idx-1+tabs.length)%tabs.length].focus(); }
+  if (e.key === 'Home'){ e.preventDefault(); tabs[0].focus(); }
+  if (e.key === 'End'){ e.preventDefault(); tabs[tabs.length-1].focus(); }
+});
+function setActiveTab(tabBtn){
+  els.tabs.querySelectorAll('[role="tab"]').forEach(t=>{
+    t.setAttribute('aria-selected', t===tabBtn ? 'true' : 'false');
+  });
+  activeCat = tabBtn.dataset.cat;
+  if (lastResults.length) renderResults(lastResults);
+}
 
-/* Geocoding origine */
+/* ===== Geocoding origine ===== */
 async function geocode(q) {
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
@@ -278,7 +354,7 @@ async function geocode(q) {
   return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
 }
 
-/* Ricerca */
+/* ===== Ricerca ===== */
 document.getElementById('searchBtn').addEventListener('click', runSearch);
 async function runSearch() {
   try {
@@ -300,8 +376,7 @@ async function runSearch() {
     ) : allRows;
 
     const withDist = filtered.map(r => ({
-      ...r,
-      distanza_km: haversineKm(origin, {lat:r.lat, lon:r.lon})
+      ...r, distanza_km: haversineKm(origin, {lat:r.lat, lon:r.lon})
     })).sort((a,b) => a.distanza_km - b.distanza_km);
 
     lastResults = withDist;
@@ -312,7 +387,7 @@ async function runSearch() {
   }
 }
 
-/* Pulisci */
+/* ===== Pulisci ===== */
 document.getElementById('clearBtn').addEventListener('click', ()=>{
   els.addressInput.value = "";
   els.textFilter.value = "";
@@ -321,40 +396,45 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   els.status.textContent = "In attesa di input…";
 });
 
-/* Render risultati (rispetta tab attiva) */
+/* ===== Render risultati (rispetta tab attiva) ===== */
 function renderResults(rows) {
   const tbody = els.resultsBody;
   tbody.innerHTML = "";
   const subset = activeCat==="ALL" ? rows : rows.filter(r=>r._cat===activeCat);
   subset.forEach(r => {
     const tr = document.createElement('tr');
+    const gmaps = mapsLink(r.lat, r.lon);
+    tr.setAttribute('role','row');
     tr.innerHTML = `
-      <td><b>${r.distanza_km.toFixed(2)}</b></td>
-      <td>${escapeHtml(r.NOME)}</td>
-      <td>${escapeHtml(r.INDIRIZZO)}<div class="muted">${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}</div></td>
-      <td>${renderDetails(r)}</td>
-      <td><span class="pill">${escapeHtml(r._cat)}</span></td>
+      <td role="cell"><b>${r.distanza_km.toFixed(2)}</b></td>
+      <td role="cell">${escapeHtml(r.NOME)}</td>
+      <td role="cell">${escapeHtml(r.INDIRIZZO)}<div class="muted">${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}</div></td>
+      <td role="cell">${renderDetails(r)}</td>
+      <td role="cell"><span class="pill">${escapeHtml(r._cat)}</span></td>
+      <td role="cell"><a href="${gmaps}" target="_blank" rel="noopener" aria-label="Apri in Google Maps ${escapeHtml(r.NOME)}">Apri in Maps↗</a></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-/* Scarica risultati */
+/* ===== Scarica risultati ===== */
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
   const subset = activeCat==="ALL" ? lastResults : lastResults.filter(r=>r._cat===activeCat);
   if (!subset?.length) { els.status.textContent = "Nessun risultato da scaricare."; return; }
-  const header = ["NOME","INDIRIZZO","lat","lon","modalita_iscrizione","giorni_orari","note","distanza_km","categoria"];
+  const header = ["NOME","INDIRIZZO","lat","lon","modalita_iscrizione","giorni_orari","note","distanza_km","categoria","maps_url"];
   const rows = subset.map(r => [
-    r.NOME, r.INDIRIZZO, r.lat, r.lon, r.modalita_iscrizione, r.giorni_orari, r.note, r.distanza_km.toFixed(2), r._cat
+    r.NOME, r.INDIRIZZO, r.lat, r.lon, r.modalita_iscrizione, r.giorni_orari, r.note, r.distanza_km.toFixed(2), r._cat, mapsLink(r.lat,r.lon)
   ]);
   const csv = Papa.unparse({fields: header, data: rows});
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = "risultati.csv";
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
 });
 
+/* ===== Conteggi per tab ===== */
 function refreshCounts() {
   const all = datasets.flatMap(d=>d.rows);
   const cElem = datasets.find(d=>d.name==="Doposcuola elementari")?.rows.length || 0;
@@ -365,6 +445,13 @@ function refreshCounts() {
   els.countMed.textContent  = cMed  ? `(${cMed})`  : "";
   els.countSup.textContent  = cSup  ? `(${cSup})`  : "";
 }
+
+/* ===== Utility: screen-reader-only (se ti serve) ===== */
+(function injectSR(){
+  const css = document.createElement('style');
+  css.innerHTML = `.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`;
+  document.head.appendChild(css);
+})();
 </script>
 </body>
 </html>
