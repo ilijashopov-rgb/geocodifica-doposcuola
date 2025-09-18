@@ -8,15 +8,31 @@
   <!-- Tipografia -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
+  <!-- Leaflet (mappa) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
+
+  <!-- PapaParse -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
+
   <style>
     /* ================== Palette & tipografia ================== */
     :root{
       --bg:#f7f9fc; --card:#ffffff; --text:#101828; --muted:#667085;
       --primary:#2563eb; --primary-100:#e6efff; --ring:#c7d2fe; --border:#e5e7eb;
-      --success:#16a34a; --warning:#f59e0b; --radius:14px;
-      --focus-outline: 3px solid #93c5fd;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      --radius:14px; --focus-outline: 3px solid #93c5fd;
       color-scheme: light dark;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     @media (prefers-color-scheme: dark){
       :root{
@@ -26,7 +42,6 @@
       }
     }
 
-    /* ================== Layout base ================== */
     html,body{background:var(--bg); color:var(--text); margin:0; padding:0}
     body{padding:24px}
     h1{margin:0 0 8px; font-size:24px; letter-spacing:.2px}
@@ -39,7 +54,6 @@
       .grid-3-2-1{grid-template-columns:1fr}
     }
 
-    /* ================== Card (morbide + hover) ================== */
     .card{
       background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
       box-shadow:0 6px 24px rgba(16,24,40,.06);
@@ -48,7 +62,6 @@
     .card:hover{ box-shadow:0 12px 28px rgba(16,24,40,.10); transform: translateY(-1px); }
     .card > *{padding:16px}
 
-    /* ================== Form & bottoni (micro-animazioni) ================== */
     label{font-size:14px; color:var(--muted); display:block; margin:2px 0 6px 0; padding:0 16px}
     input[type="text"], select, input[type="file"]{
       width:calc(100% - 32px); margin:0 16px 12px 16px; padding:12px;
@@ -69,25 +82,18 @@
     }
     .btn:hover{ filter:brightness(.98) }
     .btn:active{ transform: translateY(1px) scale(0.99) }
-    .btn-secondary{
-      background:var(--primary-100); color:var(--primary); box-shadow:none;
-    }
+    .btn-secondary{ background:var(--primary-100); color:var(--primary); box-shadow:none; }
     .btn:focus-visible{ outline: var(--focus-outline); outline-offset: 2px }
-
     .row-flex{ display:flex; gap:8px; align-items:end; flex-wrap:wrap; padding:0 16px 16px }
 
-    /* ================== Tabs accessibili ================== */
     .tabs{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 16px 16px 16px }
     .tab{
       padding:8px 14px; border-radius:999px; border:1px solid var(--border); background:var(--card); cursor:pointer;
       color:var(--text);
     }
-    .tab[aria-selected="true"]{
-      background:var(--primary); color:#fff; border-color:var(--primary)
-    }
+    .tab[aria-selected="true"]{ background:var(--primary); color:#fff; border-color:var(--primary) }
     .count{ font-size:12px; opacity:.85; margin-left:6px }
 
-    /* ================== Tabella (zebrato + sticky) ================== */
     table{ width:calc(100% - 32px); margin:12px 16px 16px 16px; border-collapse:separate; border-spacing:0 6px }
     thead th{
       position:sticky; top:0; z-index:2; background:color-mix(in oklab, var(--primary) 8%, var(--card));
@@ -100,39 +106,59 @@
     tbody tr td:first-child, thead tr th:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px }
     tbody tr td:last-child,  thead tr th:last-child { border-top-right-radius:10px; border-bottom-right-radius:10px }
     tbody tr:nth-child(2n) td{ background: color-mix(in srgb, var(--card) 88%, var(--bg)) }
+    tr.selected td{ outline:3px solid color-mix(in oklab, var(--primary) 50%, transparent) }
 
     details summary{ cursor:pointer; color:var(--primary) }
     .pill{ display:inline-block; padding:2px 8px; border-radius:999px; background:var(--primary-100); color:var(--primary); font-weight:600 }
 
-    /* ================== Focus visibile su elementi interattivi ================== */
     a:focus-visible, button:focus-visible, [role="tab"]:focus-visible, input:focus-visible{
       outline: var(--focus-outline); outline-offset: 2px;
     }
+
+    /* Mappa */
+    #mapCard .mapHead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    #map { width:100%; height:320px; border-radius:12px; border:1px solid var(--border); display:none; }
+    #map.show { display:block; }
   </style>
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
 </head>
 <body>
   <main aria-labelledby="page-title">
-    <h1 id="page-title">Doposcuola – Ricerca per vicinanza</h1>
-    <p class="muted" id="intro">Carica (o pre–carica) i tre CSV, inserisci una via e ottieni i risultati ordinati per distanza. Filtra per categoria o testo.</p>
+    <div class="row-flex" style="padding:0">
+      <h1 id="page-title" data-i18n="title">Doposcuola – Ricerca per vicinanza</h1>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px; padding:0 16px">
+        <label for="lang" class="muted" data-i18n="language">Lingua</label>
+        <select id="lang" aria-label="Lingua">
+          <option value="it">Italiano</option>
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+          <option value="ar">العربية</option>
+          <option value="pa">ਪੰਜਾਬੀ</option>
+          <option value="ur">اردو</option>
+        </select>
+      </div>
+    </div>
 
-    <!-- Upload (fallback, puoi nasconderlo se non serve) -->
+    <p class="muted" id="intro" data-i18n="subtitle">
+      Carica (o pre–carica) i tre CSV, inserisci una via e ottieni i risultati ordinati per distanza. Filtra per categoria o testo.
+    </p>
+
+    <!-- Upload (fallback) -->
     <section class="grid grid-3" aria-labelledby="upload-title">
       <h2 class="sr-only" id="upload-title">Caricamento dataset</h2>
       <div class="card" role="region" aria-labelledby="label-elem">
-        <label id="label-elem" for="fileElem">Doposcuola <b>elementari</b> – carica CSV (fallback)</label>
+        <label id="label-elem" for="fileElem" data-i18n="upload_elem">Doposcuola <b>elementari</b> – carica CSV (fallback)</label>
         <input id="fileElem" type="file" accept=".csv" aria-describedby="infoElem" />
-        <div id="infoElem" class="muted">In attesa…</div>
+        <div id="infoElem" class="muted" data-i18n="waiting">In attesa…</div>
       </div>
       <div class="card" role="region" aria-labelledby="label-med">
-        <label id="label-med" for="fileMed">Doposcuola <b>medie</b> – carica CSV (fallback)</label>
+        <label id="label-med" for="fileMed" data-i18n="upload_med">Doposcuola <b>medie</b> – carica CSV (fallback)</label>
         <input id="fileMed" type="file" accept=".csv" aria-describedby="infoMed" />
-        <div id="infoMed" class="muted">In attesa…</div>
+        <div id="infoMed" class="muted" data-i18n="waiting">In attesa…</div>
       </div>
       <div class="card" role="region" aria-labelledby="label-sup">
-        <label id="label-sup" for="fileSup">Doposcuola <b>superiori</b> – carica CSV (fallback)</label>
+        <label id="label-sup" for="fileSup" data-i18n="upload_sup">Doposcuola <b>superiori</b> – carica CSV (fallback)</label>
         <input id="fileSup" type="file" accept=".csv" aria-describedby="infoSup" />
-        <div id="infoSup" class="muted">In attesa…</div>
+        <div id="infoSup" class="muted" data-i18n="waiting">In attesa…</div>
       </div>
     </section>
 
@@ -141,47 +167,69 @@
       <h2 class="sr-only" id="search-title">Ricerca</h2>
       <div class="grid grid-3-2-1">
         <div>
-          <label for="addressInput">Cerca una via (origine)</label>
-          <input id="addressInput" type="text" placeholder="Es. Via Roma 10, Piacenza" aria-label="Indirizzo di partenza per la ricerca" />
+          <label for="addressInput" data-i18n="origin_label">Cerca una via (origine)</label>
+          <input id="addressInput" type="text" placeholder="Es. Via Roma 10, Piacenza" aria-label="Indirizzo di partenza per la ricerca" data-i18n-placeholder="origin_ph" />
         </div>
         <div>
-          <label for="textFilter">Filtro testo (opz.)</label>
-          <input id="textFilter" type="text" placeholder="parola chiave" aria-label="Filtro testuale sui risultati" />
+          <label for="textFilter" data-i18n="filter_label">Filtro testo (opz.)</label>
+          <input id="textFilter" type="text" placeholder="parola chiave" aria-label="Filtro testuale sui risultati" data-i18n-placeholder="filter_ph" />
         </div>
         <div class="row-flex" role="group" aria-label="Azioni">
-          <button id="searchBtn" class="btn" aria-label="Cerca e ordina per distanza">Cerca</button>
-          <button id="clearBtn" class="btn btn-secondary" aria-label="Pulisci campi e risultati">Pulisci</button>
-          <button id="downloadBtn" class="btn btn-secondary" aria-label="Scarica i risultati visibili in CSV">Scarica risultati</button>
+          <button id="searchBtn" class="btn" aria-label="Cerca e ordina per distanza" data-i18n="search_btn">Cerca</button>
+          <button id="clearBtn" class="btn btn-secondary" aria-label="Pulisci campi e risultati" data-i18n="clear_btn">Pulisci</button>
+          <button id="downloadBtn" class="btn btn-secondary" aria-label="Scarica i risultati visibili in CSV" data-i18n="download_btn">Scarica risultati</button>
         </div>
       </div>
-      <div class="muted" style="margin-top:6px">Geocoding: Nominatim / OpenStreetMap (uso equo).</div>
-
-      <!-- Tabs accessibili -->
-      <div class="tabs" id="tabs" role="tablist" aria-label="Categorie">
-        <button class="tab" role="tab" aria-selected="true" data-cat="ALL" id="tab-all" aria-controls="panel-results">Tutte <span class="count" id="countALL"></span></button>
-        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola elementari" id="tab-elem" aria-controls="panel-results">Elementari <span class="count" id="countElem"></span></button>
-        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola medie" id="tab-med" aria-controls="panel-results">Medie <span class="count" id="countMed"></span></button>
-        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola superiori" id="tab-sup" aria-controls="panel-results">Superiori <span class="count" id="countSup"></span></button>
+      <div class="muted" style="margin-top:6px" data-i18n="geocoding_note">
+        Geocoding: Nominatim / OpenStreetMap (uso equo).
       </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="tabs" role="tablist" aria-label="Categorie">
+        <button class="tab" role="tab" aria-selected="true" data-cat="ALL" id="tab-all" aria-controls="panel-results" data-i18n="tab_all">
+          Tutte <span class="count" id="countALL"></span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola elementari" id="tab-elem" aria-controls="panel-results" data-i18n="tab_elem">
+          Elementari <span class="count" id="countElem"></span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola medie" id="tab-med" aria-controls="panel-results" data-i18n="tab_med">
+          Medie <span class="count" id="countMed"></span>
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-cat="Doposcuola superiori" id="tab-sup" aria-controls="panel-results" data-i18n="tab_sup">
+          Superiori <span class="count" id="countSup"></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Mappa -->
+    <section class="card" id="mapCard" role="region" aria-labelledby="map-title">
+      <div class="mapHead">
+        <h2 class="sr-only" id="map-title">Mappa risultati</h2>
+        <div class="muted" data-i18n="map_hint" style="padding:0 16px">Visualizza la mappa dei risultati e interagisci con marker e righe.</div>
+        <div style="padding:0 16px">
+          <button id="toggleMapBtn" class="btn btn-secondary" aria-expanded="false" data-i18n="toggle_map_show">Mostra mappa</button>
+        </div>
+      </div>
+      <div id="map" aria-label="Mappa dei risultati"></div>
     </section>
 
     <!-- Risultati -->
     <section class="card" id="panel-results" role="region" aria-live="polite" aria-labelledby="results-title">
       <h2 class="sr-only" id="results-title">Risultati</h2>
       <div class="row-flex" style="justify-content:space-between;">
-        <span id="status" class="muted">In attesa di input…</span>
+        <span id="status" class="muted" data-i18n="status_idle">In attesa di input…</span>
         <span id="loadedInfo" class="muted"></span>
       </div>
       <div role="table" aria-label="Elenco risultati ordinati per distanza">
         <table id="resultsTable">
           <thead>
             <tr role="row">
-              <th role="columnheader" scope="col">Distanza (km)</th>
-              <th role="columnheader" scope="col">Nome</th>
-              <th role="columnheader" scope="col">Indirizzo</th>
-              <th role="columnheader" scope="col">Dettagli</th>
-              <th role="columnheader" scope="col">Categoria</th>
-              <th role="columnheader" scope="col">Mappa</th>
+              <th role="columnheader" scope="col" data-i18n="th_distance">Distanza (km)</th>
+              <th role="columnheader" scope="col" data-i18n="th_name">Nome</th>
+              <th role="columnheader" scope="col" data-i18n="th_address">Indirizzo</th>
+              <th role="columnheader" scope="col" data-i18n="th_details">Dettagli</th>
+              <th role="columnheader" scope="col" data-i18n="th_category">Categoria</th>
+              <th role="columnheader" scope="col" data-i18n="th_map">Mappa</th>
             </tr>
           </thead>
           <tbody role="rowgroup"></tbody>
@@ -192,7 +240,6 @@
 
 <script>
 /* ================= CONFIG ================= */
-/* Se usi GitHub Pages / stesso hosting, metti i file accanto all'index e usa i percorsi relativi */
 const CSV_URLS = {
   elem: "./doposcuola_elementari.csv",
   med:  "./doposcuola_medie.csv",
@@ -200,7 +247,221 @@ const CSV_URLS = {
 };
 /* ============== FINE CONFIG ============== */
 
+/* ======== I18N (UI translations) ======== */
+const TRANSLATIONS = {
+  it: {
+    title: "Doposcuola – Ricerca per vicinanza",
+    language: "Lingua",
+    subtitle: "Carica (o pre–carica) i tre CSV, inserisci una via e ottieni i risultati ordinati per distanza. Filtra per categoria o testo.",
+    upload_elem: "Doposcuola <b>elementari</b> – carica CSV (fallback)",
+    upload_med:  "Doposcuola <b>medie</b> – carica CSV (fallback)",
+    upload_sup:  "Doposcuola <b>superiori</b> – carica CSV (fallback)",
+    waiting: "In attesa…",
+    origin_label: "Cerca una via (origine)",
+    origin_ph: "Es. Via Roma 10, Piacenza",
+    filter_label: "Filtro testo (opz.)",
+    filter_ph: "parola chiave",
+    search_btn: "Cerca",
+    clear_btn: "Pulisci",
+    download_btn: "Scarica risultati",
+    geocoding_note: "Geocoding: Nominatim / OpenStreetMap (uso equo).",
+    tab_all: "Tutte",
+    tab_elem: "Elementari",
+    tab_med: "Medie",
+    tab_sup: "Superiori",
+    map_hint: "Visualizza la mappa dei risultati e interagisci con marker e righe.",
+    toggle_map_show: "Mostra mappa",
+    toggle_map_hide: "Nascondi mappa",
+    status_idle: "In attesa di input…",
+    th_distance: "Distanza (km)",
+    th_name: "Nome",
+    th_address: "Indirizzo",
+    th_details: "Dettagli",
+    th_category: "Categoria",
+    th_map: "Mappa",
+    maps_open: "Apri in Maps↗"
+  },
+  en: {
+    title: "Afterschool – Distance search",
+    language: "Language",
+    subtitle: "Load (or pre-load) the three CSVs, enter a street and get results sorted by distance. Filter by category or text.",
+    upload_elem: "<b>Primary</b> afterschool – upload CSV (fallback)",
+    upload_med:  "<b>Middle school</b> afterschool – upload CSV (fallback)",
+    upload_sup:  "<b>High school</b> afterschool – upload CSV (fallback)",
+    waiting: "Waiting…",
+    origin_label: "Search a street (origin)",
+    origin_ph: "e.g. Via Roma 10, Piacenza",
+    filter_label: "Text filter (opt.)",
+    filter_ph: "keyword",
+    search_btn: "Search",
+    clear_btn: "Clear",
+    download_btn: "Download results",
+    geocoding_note: "Geocoding: Nominatim / OpenStreetMap (fair use).",
+    tab_all: "All",
+    tab_elem: "Primary",
+    tab_med: "Middle",
+    tab_sup: "High",
+    map_hint: "Show the map and interact with markers and rows.",
+    toggle_map_show: "Show map",
+    toggle_map_hide: "Hide map",
+    status_idle: "Waiting for input…",
+    th_distance: "Distance (km)",
+    th_name: "Name",
+    th_address: "Address",
+    th_details: "Details",
+    th_category: "Category",
+    th_map: "Map",
+    maps_open: "Open in Maps↗"
+  },
+  fr: {
+    title: "Aide aux devoirs – Recherche par distance",
+    language: "Langue",
+    subtitle: "Chargez (ou préchargez) les trois CSV, saisissez une rue et obtenez les résultats triés par distance. Filtre par catégorie ou texte.",
+    upload_elem: "Aide <b>école primaire</b> – charger CSV (secours)",
+    upload_med:  "Aide <b>collège</b> – charger CSV (secours)",
+    upload_sup:  "Aide <b>lycée</b> – charger CSV (secours)",
+    waiting: "En attente…",
+    origin_label: "Chercher une rue (origine)",
+    origin_ph: "ex. Via Roma 10, Piacenza",
+    filter_label: "Filtre texte (optionnel)",
+    filter_ph: "mot-clé",
+    search_btn: "Rechercher",
+    clear_btn: "Effacer",
+    download_btn: "Télécharger",
+    geocoding_note: "Géocodage : Nominatim / OpenStreetMap (usage équitable).",
+    tab_all: "Toutes",
+    tab_elem: "Primaire",
+    tab_med: "Collège",
+    tab_sup: "Lycée",
+    map_hint: "Affichez la carte et interagissez avec les marqueurs et les lignes.",
+    toggle_map_show: "Afficher la carte",
+    toggle_map_hide: "Masquer la carte",
+    status_idle: "En attente…",
+    th_distance: "Distance (km)",
+    th_name: "Nom",
+    th_address: "Adresse",
+    th_details: "Détails",
+    th_category: "Catégorie",
+    th_map: "Carte",
+    maps_open: "Ouvrir dans Maps↗"
+  },
+  ar: {
+    title: "دروس الدعم – البحث حسب القرب",
+    language: "اللغة",
+    subtitle: "حمّل ملفات CSV الثلاثة، اكتب اسم شارع لتحصل على النتائج مرتبة حسب المسافة. يمكنك التصفية حسب الفئة أو النص.",
+    upload_elem: "دروس <b>الابتدائي</b> – رفع CSV (بديل)",
+    upload_med:  "دروس <b>المتوسط</b> – رفع CSV (بديل)",
+    upload_sup:  "دروس <b>الثانوي</b> – رفع CSV (بديل)",
+    waiting: "بانتظار…",
+    origin_label: "ابحث عن شارع (نقطة الانطلاق)",
+    origin_ph: "مثال: Via Roma 10, Piacenza",
+    filter_label: "تصفية نصية (اختياري)",
+    filter_ph: "كلمة مفتاحية",
+    search_btn: "بحث",
+    clear_btn: "مسح",
+    download_btn: "تنزيل النتائج",
+    geocoding_note: "ترميز جغرافي: Nominatim / OpenStreetMap (استخدام عادل).",
+    tab_all: "الكل",
+    tab_elem: "الابتدائي",
+    tab_med: "المتوسط",
+    tab_sup: "الثانوي",
+    map_hint: "اعرض الخريطة وتفاعل مع العلامات والصفوف.",
+    toggle_map_show: "إظهار الخريطة",
+    toggle_map_hide: "إخفاء الخريطة",
+    status_idle: "بانتظار الإدخال…",
+    th_distance: "المسافة (كم)",
+    th_name: "الاسم",
+    th_address: "العنوان",
+    th_details: "التفاصيل",
+    th_category: "الفئة",
+    th_map: "الخريطة",
+    maps_open: "افتح في خرائط↗"
+  },
+  pa: {
+    title: "ਸਕੂਲ ਬਾਅਦ – ਦੂਰੀ ਅਨੁਸਾਰ ਖੋਜ",
+    language: "ਭਾਸ਼ਾ",
+    subtitle: "ਤਿੰਨ CSV ਲੋਡ ਕਰੋ, ਸੜਕ ਲਿਖੋ ਅਤੇ ਨਤੀਜੇ ਦੂਰੀ ਅਨੁਸਾਰ ਵੇਖੋ। ਸ਼੍ਰੇਣੀ ਜਾਂ ਲਫ਼ਜ਼ੀ ਫਿਲਟਰ ਲਗਾਓ।",
+    upload_elem: "<b>ਪ੍ਰਾਇਮਰੀ</b> – CSV ਅੱਪਲੋਡ (ਫਾਲਬੈਕ)",
+    upload_med:  "<b>ਮਿਡਲ</b> – CSV ਅੱਪਲੋਡ (ਫਾਲਬੈਕ)",
+    upload_sup:  "<b>ਹਾਈ ਸਕੂਲ</b> – CSV ਅੱਪਲੋਡ (ਫਾਲਬੈਕ)",
+    waiting: "ਉਡੀਕ ਜਾਰੀ…",
+    origin_label: "ਗਲੀ ਖੋਜੋ (ਸ਼ੁਰੂਆਤ)",
+    origin_ph: "ਉਦਾਹਰਣ: Via Roma 10, Piacenza",
+    filter_label: "ਟੈਕਸਟ ਫਿਲਟਰ (ਵਿਕਲਪ)",
+    filter_ph: "ਕੀ–ਵਰਡ",
+    search_btn: "ਖੋਜ",
+    clear_btn: "ਸਾਫ਼",
+    download_btn: "ਨਤੀਜੇ ਡਾਊਨਲੋਡ ਕਰੋ",
+    geocoding_note: "ਜੀਓਕੋਡਿੰਗ: Nominatim / OpenStreetMap (ਫੇਅਰ ਯੂਜ਼)।",
+    tab_all: "ਸਾਰੇ",
+    tab_elem: "ਪ੍ਰਾਇਮਰੀ",
+    tab_med: "ਮਿਡਲ",
+    tab_sup: "ਹਾਈ",
+    map_hint: "ਨਕਸ਼ਾ ਵੇਖੋ ਅਤੇ ਮਾਰਕਰ/ਸਤਰਾਂ ਨਾਲ ਇੰਟਰਐਕਟ ਕਰੋ।",
+    toggle_map_show: "ਨਕਸ਼ਾ ਦਿਖਾਓ",
+    toggle_map_hide: "ਨਕਸ਼ਾ ਲੁਕਾਓ",
+    status_idle: "ਇੰਪੁੱਟ ਦੀ ਉਡੀਕ…",
+    th_distance: "ਦੂਰੀ (ਕਿਮੀ)",
+    th_name: "ਨਾਮ",
+    th_address: "ਪਤਾ",
+    th_details: "ਵੇਰਵਾ",
+    th_category: "ਸ਼੍ਰੇਣੀ",
+    th_map: "ਨਕਸ਼ਾ",
+    maps_open: "ਮੈਪਸ 'ਚ ਖੋਲ੍ਹੋ↗"
+  },
+  ur: {
+    title: "بعد از اسکول – قربت کے لحاظ سے تلاش",
+    language: "زبان",
+    subtitle: "تین CSV فائلیں لوڈ کریں، کوئی سڑک لکھیں اور نتائج فاصلے کے حساب سے دیکھیں۔ زمرہ یا متن کے ذریعے فلٹر کریں۔",
+    upload_elem: "<b>پرائمری</b> – CSV اپ لوڈ (فالبیک)",
+    upload_med:  "<b>مڈل</b> – CSV اپ لوڈ (فالبیک)",
+    upload_sup:  "<b>ہائی اسکول</b> – CSV اپ لوڈ (فالبیک)",
+    waiting: "انتظار میں…",
+    origin_label: "سڑک تلاش کریں (آغاز)",
+    origin_ph: "مثال: Via Roma 10, Piacenza",
+    filter_label: "متنی فلٹر (اختیاری)",
+    filter_ph: "کلیدی لفظ",
+    search_btn: "تلاش",
+    clear_btn: "صاف کریں",
+    download_btn: "نتائج ڈاؤن لوڈ کریں",
+    geocoding_note: "جیوکوڈنگ: Nominatim / OpenStreetMap (منصفانہ استعمال)۔",
+    tab_all: "سب",
+    tab_elem: "پرائمری",
+    tab_med: "مڈل",
+    tab_sup: "ہائی",
+    map_hint: "نقشہ دیکھیں اور مارکر/قطاروں سے تعامل کریں۔",
+    toggle_map_show: "نقشہ دکھائیں",
+    toggle_map_hide: "نقشہ چھپائیں",
+    status_idle: "ان پٹ کا انتظار…",
+    th_distance: "فاصلہ (کلومیٹر)",
+    th_name: "نام",
+    th_address: "پتہ",
+    th_details: "تفصیل",
+    th_category: "زمرہ",
+    th_map: "نقشہ",
+    maps_open: "میپس میں کھولیں↗"
+  }
+};
+
+function applyI18n(lang){
+  const dict = TRANSLATIONS[lang] || TRANSLATIONS.it;
+  // testo
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang==='ar' || lang==='ur') ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  // placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (dict[key] !== undefined) el.setAttribute('placeholder', dict[key]);
+  });
+}
+
+/* ===== App state ===== */
 const els = {
+  lang: document.getElementById('lang'),
   fileElem: document.getElementById('fileElem'),
   fileMed: document.getElementById('fileMed'),
   fileSup: document.getElementById('fileSup'),
@@ -220,12 +481,17 @@ const els = {
   countElem: document.getElementById('countElem'),
   countMed: document.getElementById('countMed'),
   countSup: document.getElementById('countSup'),
+  mapCard: document.getElementById('mapCard'),
+  mapDiv: document.getElementById('map'),
+  toggleMapBtn: document.getElementById('toggleMapBtn'),
 };
 const datasets = []; // {name, rows: [...]}
 let activeCat = "ALL";
 let lastResults = [];
+let map, markerLayer, markers = []; // Leaflet
+let selectedIdx = null;
 
-/* ===== Util ===== */
+/* ===== Utils ===== */
 function haversineKm(a, b) {
   const R = 6371;
   const toRad = d => d * Math.PI / 180;
@@ -262,12 +528,13 @@ function renderDetails(row) {
   if (full.length <= 220) return full;
   return `<details><summary>Leggi di più</summary><div style="margin-top:8px">${full}</div></details>`;
 }
-function mapsLink(lat, lon){
-  const q = `${lat},${lon}`;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-}
+function mapsLink(lat, lon){ return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`; }
 
-/* ===== Caricamento CSV (URL / upload) ===== */
+/* ===== I18N init ===== */
+els.lang.addEventListener('change', ()=>applyI18n(els.lang.value));
+applyI18n('it');
+
+/* ===== Caricamento CSV ===== */
 function addDataset(name, rows) {
   const idx = datasets.findIndex(d => d.name === name);
   const ds = { name, rows };
@@ -303,12 +570,11 @@ hookFileInput(els.fileElem, "Doposcuola elementari", els.infoElem);
 hookFileInput(els.fileMed,  "Doposcuola medie",      els.infoMed);
 hookFileInput(els.fileSup,  "Doposcuola superiori",  els.infoSup);
 
-/* Auto-load all'avvio */
+/* Auto-load */
 (async function autoLoad() {
   try {
     els.status.textContent = "Carico dataset…";
     let total=0;
-
     try { const n = await fetchCsv("Doposcuola elementari", CSV_URLS.elem); total+=n; els.infoElem.textContent = `Auto: ${n} righe`; } catch(e){ els.infoElem.textContent = `Auto (URL) fallito`; }
     try { const n = await fetchCsv("Doposcuola medie",      CSV_URLS.med ); total+=n; els.infoMed.textContent  = `Auto: ${n} righe`; } catch(e){ els.infoMed.textContent  = `Auto (URL) fallito`; }
     try { const n = await fetchCsv("Doposcuola superiori",  CSV_URLS.sup ); total+=n; els.infoSup.textContent  = `Auto: ${n} righe`; } catch(e){ els.infoSup.textContent  = `Auto (URL) fallito`; }
@@ -321,28 +587,14 @@ hookFileInput(els.fileSup,  "Doposcuola superiori",  els.infoSup);
   }
 })();
 
-/* ===== Tabs accessibili (mouse + tastiera) ===== */
+/* ===== Tabs ===== */
 els.tabs.addEventListener('click', (e)=>{
   const b = e.target.closest('[role="tab"]'); if (!b) return;
-  setActiveTab(b);
-});
-els.tabs.addEventListener('keydown', (e)=>{
-  const tabs = [...els.tabs.querySelectorAll('[role="tab"]')];
-  const current = document.activeElement;
-  const idx = tabs.indexOf(current);
-  if (idx === -1) return;
-  if (e.key === 'ArrowRight'){ e.preventDefault(); tabs[(idx+1)%tabs.length].focus(); }
-  if (e.key === 'ArrowLeft'){ e.preventDefault(); tabs[(idx-1+tabs.length)%tabs.length].focus(); }
-  if (e.key === 'Home'){ e.preventDefault(); tabs[0].focus(); }
-  if (e.key === 'End'){ e.preventDefault(); tabs[tabs.length-1].focus(); }
-});
-function setActiveTab(tabBtn){
-  els.tabs.querySelectorAll('[role="tab"]').forEach(t=>{
-    t.setAttribute('aria-selected', t===tabBtn ? 'true' : 'false');
-  });
-  activeCat = tabBtn.dataset.cat;
+  els.tabs.querySelectorAll('[role="tab"]').forEach(t=>t.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true');
+  activeCat = b.dataset.cat;
   if (lastResults.length) renderResults(lastResults);
-}
+});
 
 /* ===== Geocoding origine ===== */
 async function geocode(q) {
@@ -380,7 +632,7 @@ async function runSearch() {
     })).sort((a,b) => a.distanza_km - b.distanza_km);
 
     lastResults = withDist;
-    renderResults(withDist);
+    renderResults(withDist, true);
     els.status.textContent = `Trovati ${withDist.length} risultati.`;
   } catch (e) {
     els.status.textContent = e.message || "Errore in ricerca.";
@@ -393,29 +645,108 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   els.textFilter.value = "";
   lastResults = [];
   els.resultsBody.innerHTML = "";
-  els.status.textContent = "In attesa di input…";
+  clearMap();
+  els.status.textContent = TRANSLATIONS[els.lang.value]?.status_idle || "In attesa di input…";
 });
 
-/* ===== Render risultati (rispetta tab attiva) ===== */
-function renderResults(rows) {
-  const tbody = els.resultsBody;
-  tbody.innerHTML = "";
+/* ===== Render risultati + mappa ===== */
+function renderResults(rows, updateMap=true) {
+  const tbody = els.resultsBody; tbody.innerHTML = "";
   const subset = activeCat==="ALL" ? rows : rows.filter(r=>r._cat===activeCat);
-  subset.forEach(r => {
+
+  subset.forEach((r, idx) => {
     const tr = document.createElement('tr');
-    const gmaps = mapsLink(r.lat, r.lon);
     tr.setAttribute('role','row');
+    tr.dataset.idx = idx.toString();
+    const mapsText = TRANSLATIONS[els.lang.value]?.maps_open || TRANSLATIONS.it.maps_open;
     tr.innerHTML = `
       <td role="cell"><b>${r.distanza_km.toFixed(2)}</b></td>
       <td role="cell">${escapeHtml(r.NOME)}</td>
       <td role="cell">${escapeHtml(r.INDIRIZZO)}<div class="muted">${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}</div></td>
       <td role="cell">${renderDetails(r)}</td>
       <td role="cell"><span class="pill">${escapeHtml(r._cat)}</span></td>
-      <td role="cell"><a href="${gmaps}" target="_blank" rel="noopener" aria-label="Apri in Google Maps ${escapeHtml(r.NOME)}">Apri in Maps↗</a></td>
+      <td role="cell"><a href="${mapsLink(r.lat, r.lon)}" target="_blank" rel="noopener">${mapsText}</a></td>
     `;
+    tr.addEventListener('click', ()=>focusRow(idx));
     tbody.appendChild(tr);
   });
+
+  if (updateMap) {
+    updateMapMarkers(subset);
+  }
 }
+
+/* ===== Leaflet helpers ===== */
+function ensureMap(){
+  if (map) return;
+  map = L.map('map', { scrollWheelZoom: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+}
+function clearMap(){
+  if (!map || !markerLayer) return;
+  markerLayer.clearLayers();
+  markers = [];
+}
+function updateMapMarkers(subset){
+  const show = els.mapDiv.classList.contains('show');
+  if (!show) return; // non aggiorniamo se la mappa è nascosta
+  ensureMap();
+  clearMap();
+  if (!subset.length) return;
+
+  const bounds = [];
+  subset.forEach((r, idx) => {
+    const m = L.marker([r.lat, r.lon]).addTo(markerLayer);
+    m.bindPopup(`<b>${escapeHtml(r.NOME)}</b><br>${escapeHtml(r.INDIRIZZO)}<br><a href="${mapsLink(r.lat,r.lon)}" target="_blank" rel="noopener">Maps↗</a>`);
+    m.on('click', ()=>focusRow(idx, true));
+    markers.push(m);
+    bounds.push([r.lat, r.lon]);
+  });
+  if (bounds.length === 1) {
+    map.setView(bounds[0], 15);
+  } else {
+    map.fitBounds(bounds, { padding: [24,24] });
+  }
+}
+function focusRow(idx, fromMarker=false){
+  const tbody = els.resultsBody;
+  tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected'));
+  const tr = tbody.querySelector(`tr[data-idx="${idx}"]`);
+  if (tr) {
+    tr.classList.add('selected');
+    tr.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  selectedIdx = idx;
+
+  // Sync mappa
+  if (els.mapDiv.classList.contains('show') && markers[idx]) {
+    ensureMap();
+    markers[idx].openPopup();
+    map.panTo(markers[idx].getLatLng());
+  }
+}
+
+/* Toggle mappa */
+els.toggleMapBtn.addEventListener('click', ()=>{
+  const dict = TRANSLATIONS[els.lang.value] || TRANSLATIONS.it;
+  const isShown = els.mapDiv.classList.toggle('show');
+  els.toggleMapBtn.setAttribute('aria-expanded', isShown ? 'true' : 'false');
+  els.toggleMapBtn.textContent = isShown ? dict.toggle_map_hide : dict.toggle_map_show;
+
+  if (isShown) {
+    ensureMap();
+    if (lastResults.length){
+      const subset = activeCat==="ALL" ? lastResults : lastResults.filter(r=>r._cat===activeCat);
+      updateMapMarkers(subset);
+    }
+    setTimeout(()=>map?.invalidateSize(), 50);
+  } else {
+    clearMap();
+  }
+});
 
 /* ===== Scarica risultati ===== */
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
@@ -430,8 +761,7 @@ document.getElementById('downloadBtn').addEventListener('click', ()=>{
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = "risultati.csv";
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 });
 
 /* ===== Conteggi per tab ===== */
@@ -446,7 +776,7 @@ function refreshCounts() {
   els.countSup.textContent  = cSup  ? `(${cSup})`  : "";
 }
 
-/* ===== Utility: screen-reader-only (se ti serve) ===== */
+/* SR-only utility */
 (function injectSR(){
   const css = document.createElement('style');
   css.innerHTML = `.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`;
